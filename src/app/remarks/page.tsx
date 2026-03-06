@@ -199,115 +199,203 @@ export default function RemarksPage() {
   }));
   const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
+  const loadImage = (url: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = document.createElement("img");
+
+      img.src = url;
+      img.crossOrigin = "anonymous";
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0);
+
+        resolve(canvas.toDataURL("image/png"));
+      };
+    });
+  };
+
   const handleDownload = async () => {
     const pdf = new jsPDF("p", "mm", "a4");
 
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
     let currentY = 20;
+
+    // helper function for page breaks
+    const checkPageSpace = (requiredHeight: number) => {
+      if (currentY + requiredHeight > pageHeight - 15) {
+        pdf.addPage();
+        currentY = 20;
+      }
+    };
+
+    // ===== Load Logo =====
+    const logo = await loadImage("/logo.png");
+
+    const imgWidth = 60;
+    const imgHeight = 30;
+
+    const imgX = (pageWidth - imgWidth) / 2;
+
+    pdf.addImage(logo, "PNG", imgX, 10, imgWidth, imgHeight);
+
+    currentY = 50;
 
     // ===== Title =====
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(18);
-    pdf.text("Student Test Report", 105, currentY, { align: "center" });
+    pdf.text("Student Test Report", pageWidth / 2, currentY, {
+      align: "center",
+    });
 
-    currentY += 20;
+    currentY += 15;
+
+    // divider line
+    pdf.setDrawColor(200);
+    pdf.line(20, currentY, pageWidth - 20, currentY);
+
+    currentY += 10;
 
     // ===== Student Info =====
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(12);
+
     pdf.text(`Student Name: ${studentName}`, 20, currentY);
-    currentY += 10;
+    currentY += 8;
+
     pdf.text(`Student Number: ${studentNumber}`, 20, currentY);
+    currentY += 12;
 
-    currentY += 15;
-
-    // ===== Insert Bar Chart =====
+    // ===== BAR CHART =====
     if (selectedCharts.includes("Bar Graph") && barChartRef.current) {
+      checkPageSpace(95);
+
       const barImage = await toPng(barChartRef.current, {
         cacheBust: true,
         pixelRatio: 2,
+        backgroundColor: "#ffffff",
       });
 
       pdf.addImage(barImage, "PNG", 20, currentY, 170, 90);
-      currentY += 100;
+      currentY += 95;
     }
 
-    // ===== Insert Pie Chart =====
+    // ===== PIE CHART =====
     if (selectedCharts.includes("Pie Chart") && pieChartRef.current) {
+      checkPageSpace(95);
+
       const pieImage = await toPng(pieChartRef.current, {
         cacheBust: true,
         pixelRatio: 2,
+        backgroundColor: "#ffffff",
       });
 
       pdf.addImage(pieImage, "PNG", 20, currentY, 170, 90);
-      currentY += 100;
+      currentY += 95;
     }
-    if (currentY > 250) {
-      pdf.addPage();
-      currentY = 20;
-    }
-    // ===== Insert Radar Chart =====
+
+    // ===== RADAR CHART =====
     if (selectedCharts.includes("Radar Chart") && radarChartRef.current) {
+      checkPageSpace(95);
+
       const radarImage = await toPng(radarChartRef.current, {
         cacheBust: true,
         pixelRatio: 2,
+        backgroundColor: "#ffffff",
       });
 
       pdf.addImage(radarImage, "PNG", 20, currentY, 170, 90);
-      currentY += 100;
+      currentY += 95;
     }
 
-    // If content exceeds page height, add new page
-    if (currentY > 250) {
-      pdf.addPage();
-      currentY = 20;
-    }
+    // ===== Parameter Scores =====
+    checkPageSpace(20);
 
-    // ===== Parameter Score Breakdown =====
     pdf.setFont("helvetica", "bold");
     pdf.text("Parameter Scores:", 20, currentY);
+
+    currentY += 8;
+
+    pdf.setFont("helvetica", "normal");
+
+    chartData.forEach((item) => {
+      checkPageSpace(8);
+
+      pdf.text(
+        `${item.parameter}: ${item.score.toFixed(2)} / 10`,
+        25,
+        currentY,
+      );
+
+      currentY += 7;
+    });
+
     currentY += 10;
+
+    // ===== Detailed Evaluation =====
+    checkPageSpace(20);
 
     pdf.setFont("helvetica", "bold");
     pdf.text("Detailed Evaluation:", 20, currentY);
-    currentY += 10;
+
+    currentY += 8;
 
     pdf.setFont("helvetica", "normal");
 
     parameterRemarks.forEach((item) => {
       const text = `${item.parameter}: ${item.remark}`;
       const splitText = pdf.splitTextToSize(text, 170);
+
+      checkPageSpace(splitText.length * 6);
+
       pdf.text(splitText, 20, currentY);
-      currentY += splitText.length * 7 + 5;
+
+      currentY += splitText.length * 6 + 4;
     });
-    currentY += 10;
-
-    pdf.setFont("helvetica", "normal");
-
-    chartData.forEach((item) => {
-      pdf.text(
-        `${item.parameter}: ${item.score.toFixed(2)} / 10`,
-        25,
-        currentY,
-      );
-      currentY += 8;
-    });
-
-    currentY += 5;
 
     // ===== Overall Score =====
+    checkPageSpace(15);
+
     pdf.setFont("helvetica", "bold");
     pdf.text(`Overall Rating: ${overallScore} / 10`, 20, currentY);
 
-    currentY += 15;
+    currentY += 12;
 
     // ===== Remarks =====
     if (remarks) {
+      checkPageSpace(20);
+
       pdf.setFont("helvetica", "bold");
       pdf.text("Remarks:", 20, currentY);
-      currentY += 10;
+
+      currentY += 8;
 
       pdf.setFont("helvetica", "normal");
-      pdf.text(remarks, 20, currentY, { maxWidth: 170 });
+
+      const splitRemarks = pdf.splitTextToSize(remarks, 170);
+
+      checkPageSpace(splitRemarks.length * 6);
+
+      pdf.text(splitRemarks, 20, currentY);
+
+      currentY += splitRemarks.length * 6;
+    }
+
+    // ===== Footer Page Numbers =====
+    const totalPages = pdf.getNumberOfPages();
+
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(10);
+      pdf.text(`Page ${i} of ${totalPages}`, pageWidth - 20, pageHeight - 10, {
+        align: "right",
+      });
     }
 
     // ===== Save =====
