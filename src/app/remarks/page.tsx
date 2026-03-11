@@ -97,14 +97,6 @@ export default function RemarksPage() {
     filename: `${studentName}_Report.pdf`,
   });
 
-  // Example static data (later we can map from Excel)
-  // const chartData = [
-  //   { subject: "Math", score: 85 },
-  //   { subject: "Science", score: 78 },
-  //   { subject: "English", score: 70 },
-  //   { subject: "History", score: 92 },
-  //   { subject: "Art", score: 88 },
-  // ];
   const { excelData } = useExcel();
   const headers = excelData[0];
 
@@ -219,6 +211,16 @@ export default function RemarksPage() {
     });
   };
 
+  const socialLinks = {
+    whatsapp:
+      "https://api.whatsapp.com/send?phone=+918897826108&text=Hi,%20IAS%20Mentoring%20-%20I%27m%20interested%20in%20knowing%20more%20about%20your%20mentorship.",
+    telegram: "https://t.me/aregurukulam",
+    facebook: "https://www.facebook.com/egurukulamias",
+    instagram: "https://www.instagram.com/egurukulamforias/",
+    youtube: "https://www.youtube.com/@IASForAll",
+    x: "https://x.com/i/flow/login?redirect_after_login=%2Fegurukulamf1674",
+  };
+
   const handleDownload = async () => {
     const pdf = new jsPDF("p", "mm", "a4");
 
@@ -227,42 +229,125 @@ export default function RemarksPage() {
 
     let currentY = 20;
 
-    // helper function for page breaks
-    const checkPageSpace = (requiredHeight: number) => {
-      if (currentY + requiredHeight > pageHeight - 15) {
-        pdf.addPage();
-        currentY = 20;
+    /* ========= WATERMARK FUNCTION ========= */
+    const drawWatermark = () => {
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.setTextColor(240); // very light grey
+      pdf.setFont("helvetica", "bold");
+
+      // Large font to span diagonally
+      pdf.setFontSize(70);
+
+      pdf.text("e-Gurukulam For IAS", pageWidth / 1.35, pageHeight / 1.35, {
+        align: "center",
+        angle: 45,
+      });
+
+      pdf.setTextColor(0); // reset color
+    };
+
+    /* ========= FOOTER FUNCTION ========= */
+    const drawFooter = (page: number, total: number) => {
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+
+      pdf.text(`Page ${page} of ${total}`, pageWidth - 20, pageHeight - 10, {
+        align: "right",
+      });
+
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Contact: 8897826108, 8985894254", 20, pageHeight - 10);
+    };
+
+    const drawSocialHeader = async (pdf: jsPDF) => {
+      const pageWidth = pdf.internal.pageSize.getWidth();
+
+      const iconSize = 8;
+      const gap = 4;
+
+      const iconsLeft = [
+        { src: "/icons/whatsapp.png", url: socialLinks.whatsapp },
+        { src: "/icons/telegram.png", url: socialLinks.telegram },
+        { src: "/icons/facebook.png", url: socialLinks.facebook },
+      ];
+
+      const iconsRight = [
+        { src: "/icons/instagram.png", url: socialLinks.instagram },
+        { src: "/icons/youtube.png", url: socialLinks.youtube },
+        { src: "/icons/x.png", url: socialLinks.x },
+      ];
+
+      let xLeft = 20;
+      let xRight = pageWidth - 20 - iconSize;
+
+      /* LEFT ICONS */
+      for (const icon of iconsLeft) {
+        const img = await loadImage(icon.src);
+
+        pdf.addImage(img, "PNG", xLeft, 8, iconSize, iconSize);
+
+        pdf.link(xLeft, 8, iconSize, iconSize, {
+          url: icon.url,
+        });
+
+        xLeft += iconSize + gap;
+      }
+
+      /* RIGHT ICONS */
+      for (const icon of iconsRight) {
+        const img = await loadImage(icon.src);
+
+        pdf.addImage(img, "PNG", xRight, 8, iconSize, iconSize);
+
+        pdf.link(xRight, 8, iconSize, iconSize, {
+          url: icon.url,
+        });
+
+        xRight -= iconSize + gap;
       }
     };
 
-    // ===== Load Logo =====
+    /* ========= PAGE BREAK HANDLER ========= */
+    const checkPageSpace = (requiredHeight: number) => {
+      if (currentY + requiredHeight > pageHeight - 20) {
+        pdf.addPage();
+        drawWatermark();
+        currentY = 40;
+      }
+    };
+
+    /* ========= INITIAL PAGE WATERMARK ========= */
+    drawWatermark();
+
+    /* ========= LOAD LOGO ========= */
     const logo = await loadImage("/logo.png");
 
     const imgWidth = 60;
     const imgHeight = 30;
-
     const imgX = (pageWidth - imgWidth) / 2;
 
     pdf.addImage(logo, "PNG", imgX, 10, imgWidth, imgHeight);
 
     currentY = 50;
 
-    // ===== Title =====
+    /* ========= TITLE ========= */
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(18);
+
     pdf.text("Student Test Report", pageWidth / 2, currentY, {
       align: "center",
     });
 
     currentY += 15;
 
-    // divider line
     pdf.setDrawColor(200);
     pdf.line(20, currentY, pageWidth - 20, currentY);
 
     currentY += 10;
 
-    // ===== Student Info =====
+    /* ========= STUDENT INFO ========= */
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(12);
 
@@ -272,57 +357,58 @@ export default function RemarksPage() {
     pdf.text(`Student Number: ${studentNumber}`, 20, currentY);
     currentY += 12;
 
-    // ===== BAR CHART =====
+    /* ========= BAR CHART ========= */
     if (selectedCharts.includes("Bar Graph") && barChartRef.current) {
       checkPageSpace(95);
 
       const barImage = await toPng(barChartRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: "#ffffff",
       });
 
       pdf.addImage(barImage, "PNG", 20, currentY, 170, 90);
       currentY += 95;
     }
 
-    // ===== PIE CHART =====
+    /* ========= PIE CHART ========= */
     if (selectedCharts.includes("Pie Chart") && pieChartRef.current) {
       checkPageSpace(95);
 
       const pieImage = await toPng(pieChartRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: "#ffffff",
       });
 
       pdf.addImage(pieImage, "PNG", 20, currentY, 170, 90);
       currentY += 95;
     }
 
-    // ===== RADAR CHART =====
+    /* ========= RADAR CHART ========= */
     if (selectedCharts.includes("Radar Chart") && radarChartRef.current) {
       checkPageSpace(95);
 
       const radarImage = await toPng(radarChartRef.current, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: "#ffffff",
       });
 
       pdf.addImage(radarImage, "PNG", 20, currentY, 170, 90);
       currentY += 95;
     }
 
-    // ===== Parameter Scores =====
+    /* ========= PARAMETER SCORES ========= */
     checkPageSpace(20);
 
+    // Section Heading
     pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
     pdf.text("Parameter Scores:", 20, currentY);
 
     currentY += 8;
 
+    // Body text
     pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
 
     chartData.forEach((item) => {
       checkPageSpace(8);
@@ -338,15 +424,17 @@ export default function RemarksPage() {
 
     currentY += 10;
 
-    // ===== Detailed Evaluation =====
+    /* ========= DETAILED EVALUATION ========= */
     checkPageSpace(20);
 
     pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
     pdf.text("Detailed Evaluation:", 20, currentY);
 
     currentY += 8;
 
     pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
 
     parameterRemarks.forEach((item) => {
       const text = `${item.parameter}: ${item.remark}`;
@@ -355,19 +443,19 @@ export default function RemarksPage() {
       checkPageSpace(splitText.length * 6);
 
       pdf.text(splitText, 20, currentY);
-
       currentY += splitText.length * 6 + 4;
     });
 
-    // ===== Overall Score =====
+    /* ========= OVERALL SCORE ========= */
     checkPageSpace(15);
 
     pdf.setFont("helvetica", "bold");
+
     pdf.text(`Overall Rating: ${overallScore} / 10`, 20, currentY);
 
     currentY += 12;
 
-    // ===== Remarks =====
+    /* ========= REMARKS ========= */
     if (remarks) {
       checkPageSpace(20);
 
@@ -383,22 +471,20 @@ export default function RemarksPage() {
       checkPageSpace(splitRemarks.length * 6);
 
       pdf.text(splitRemarks, 20, currentY);
-
       currentY += splitRemarks.length * 6;
     }
 
-    // ===== Footer Page Numbers =====
+    /* ========= Headers & Footers ========= */
     const totalPages = pdf.getNumberOfPages();
 
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
-      pdf.setFontSize(10);
-      pdf.text(`Page ${i} of ${totalPages}`, pageWidth - 20, pageHeight - 10, {
-        align: "right",
-      });
+      await drawSocialHeader(pdf);
+      await drawFooter(i, totalPages);
     }
 
-    // ===== Save =====
+
+    /* ========= SAVE ========= */
     pdf.save(`${studentName}_Report.pdf`);
   };
 
@@ -444,7 +530,10 @@ export default function RemarksPage() {
           </p>
 
           {isBarSelected && (
-            <div ref={barChartRef} className="bg-white rounded-xl p-6 shadow">
+            <div
+              ref={barChartRef}
+              className="bg-transparent rounded-xl p-6 shadow"
+            >
               <h4 className="text-lg font-semibold mb-4 text-gray-800">
                 Subject Scores
               </h4>
@@ -472,7 +561,7 @@ export default function RemarksPage() {
           {selectedCharts.includes("Pie Chart") && (
             <div
               ref={pieChartRef}
-              className="bg-white rounded-xl p-6 shadow mt-8"
+              className="bg-transparent rounded-xl p-6 shadow mt-8"
             >
               <h4 className="text-lg font-semibold mb-4 text-gray-800">
                 Parameter Distribution
@@ -508,7 +597,7 @@ export default function RemarksPage() {
           {selectedCharts.includes("Radar Chart") && (
             <div
               ref={radarChartRef}
-              className="bg-white p-6 rounded-xl shadow mt-8"
+              className="bg-transparent p-6 rounded-xl shadow mt-8"
             >
               <h3 className="text-lg font-semibold mb-4 text-gray-800">
                 Performance Overview
