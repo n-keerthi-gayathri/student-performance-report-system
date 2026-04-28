@@ -548,12 +548,15 @@ export default function RemarksPage() {
           ref={targetRef}
           className="w-[800px] bg-gray-100 rounded-3xl p-8 shadow-xl"
         >
+          <h3 className="text-2xl font-semibold text-center mt-6 text-gray-800">
+            GURU-SHISHYA ABHYASA PRAGATHI STUDY TRACKER
+          </h3>
           <h3 className="text-2xl font-semibold text-center mb-6 text-gray-800">
-            Student Report
+            {freqOfReport} Report
           </h3>
 
           <p className="mb-6 text-center text-gray-800">
-            <strong>{studentName}</strong> | Student No: {studentNumber}
+            <strong>{studentName}</strong> | Batch: {batchName} | Attempting Year: {attemptingYear}
           </p>
 
           {isBarSelected && (
@@ -665,7 +668,7 @@ export default function RemarksPage() {
             Overall Rating: {overallScore.toFixed(2)} / 10
           </h3>
            <h3 className="text-xl font-bold mt-6 text-gray-800">
-            Overall Grade: {getGrade(overallScore)} / 10
+            Overall Grade: {getGrade(overallScore)}
           </h3>
           {remarks && (
             <div className="mt-8 bg-white p-4 rounded-xl">
