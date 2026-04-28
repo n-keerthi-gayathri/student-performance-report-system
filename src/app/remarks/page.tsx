@@ -77,6 +77,12 @@ export default function RemarksPage() {
     if (score >= 5) return remarkSet.moderate;
     return remarkSet.low;
   };
+  const getGrade = (score: number) => {
+    if (score >= 8) return "A++";
+    if (score >= 7) return "A+";
+    if (score >= 6) return "A";
+    return "-";
+  }
   const chartRef = useRef<HTMLDivElement>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const barChartRef = useRef<HTMLDivElement>(null);
@@ -93,6 +99,9 @@ export default function RemarksPage() {
 
   const studentNumber = selectedStudent[0];
   const studentName = selectedStudent[1];
+  const batchName = selectedStudent[2];
+  const attemptingYear = selectedStudent[3];
+  const freqOfReport = selectedStudent[4];
   const { toPDF, targetRef } = usePDF({
     filename: `${studentName}_Report.pdf`,
   });
@@ -129,11 +138,11 @@ export default function RemarksPage() {
     return (total / 3).toFixed(2);
   };
   // Ensure scores are always numbers
-  const disciplineScore = Number(calculateCategoryAverage(2));
-  const consistencyScore = Number(calculateCategoryAverage(5));
-  const selfMotivationScore = Number(calculateCategoryAverage(8));
-  const accountabilityScore = Number(calculateCategoryAverage(11));
-  const stressHandlingScore = Number(calculateCategoryAverage(14));
+  const disciplineScore = Number(calculateCategoryAverage(5));
+  const consistencyScore = Number(calculateCategoryAverage(8));
+  const selfMotivationScore = Number(calculateCategoryAverage(11));
+  const accountabilityScore = Number(calculateCategoryAverage(14));
+  const stressHandlingScore = Number(calculateCategoryAverage(17));
 
   const parameterRemarks = [
     {
@@ -176,7 +185,7 @@ export default function RemarksPage() {
       Number(accountabilityScore) +
       Number(stressHandlingScore)) /
     5
-  ).toFixed(2);
+  );
 
   const chartData = [
     { parameter: "Discipline", score: Number(disciplineScore) },
@@ -336,7 +345,17 @@ export default function RemarksPage() {
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(18);
 
-    pdf.text("Student Test Report", pageWidth / 2, currentY, {
+    pdf.text(
+      "GURU-SHISHYA ABHYASA\n PRAGATHI STUDY TRACKER",
+      pageWidth / 2,
+      currentY,
+      {
+        align: "center",
+      },
+    );
+    currentY += 15;
+
+    pdf.text(`${freqOfReport} Report`, pageWidth / 2, currentY, {
       align: "center",
     });
 
@@ -354,8 +373,14 @@ export default function RemarksPage() {
     pdf.text(`Student Name: ${studentName}`, 20, currentY);
     currentY += 8;
 
-    pdf.text(`Student Number: ${studentNumber}`, 20, currentY);
+    pdf.text(`Batch: ${batchName}`, 20, currentY);
+    currentY += 8;
+
+    pdf.text(`Attempting Year: ${attemptingYear}`, 20, currentY);
     currentY += 12;
+
+    // pdf.text(`Student Number: ${studentNumber}`, 20, currentY);
+    // currentY += 12;
 
     /* ========= BAR CHART ========= */
     if (selectedCharts.includes("Bar Graph") && barChartRef.current) {
@@ -451,7 +476,10 @@ export default function RemarksPage() {
 
     pdf.setFont("helvetica", "bold");
 
-    pdf.text(`Overall Rating: ${overallScore} / 10`, 20, currentY);
+    pdf.text(`Overall Rating: ${overallScore.toFixed(2)} / 10`, 20, currentY);
+
+    currentY += 8;
+    pdf.text(`Overall Grade: ${getGrade(overallScore)}`, 20, currentY);
 
     currentY += 12;
 
@@ -482,7 +510,6 @@ export default function RemarksPage() {
       await drawSocialHeader(pdf);
       await drawFooter(i, totalPages);
     }
-
 
     /* ========= SAVE ========= */
     pdf.save(`${studentName}_Report.pdf`);
@@ -635,7 +662,10 @@ export default function RemarksPage() {
             ))}
           </div>
           <h3 className="text-xl font-bold mt-6 text-gray-800">
-            Overall Rating: {overallScore} / 10
+            Overall Rating: {overallScore.toFixed(2)} / 10
+          </h3>
+           <h3 className="text-xl font-bold mt-6 text-gray-800">
+            Overall Grade: {getGrade(overallScore)} / 10
           </h3>
           {remarks && (
             <div className="mt-8 bg-white p-4 rounded-xl">

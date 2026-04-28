@@ -110,7 +110,7 @@ export default function StudentsPage() {
           Previous
         </button>
 
-        <span className="font-medium">
+        <span className="font-medium text-gray-800">
           Page {currentPage} of {totalPages}
         </span>
 
